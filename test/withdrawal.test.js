@@ -46,12 +46,12 @@ writeFileSync(new URL('./last-withdrawal-team.html', import.meta.url), team.body
 console.log('✓ valid notice: client gets a confirmation with the reference, team gets the full details');
 
 sent = [];
-for (const [k, v] of [['email', 'x'], ['orderNumber', 'abc'], ['purchaseDate', '2099-01-01'], ['service', 'Pizza'], ['declaration', false], ['firstName', '']]) {
+for (const [k, v] of [['email', 'x'], ['orderNumber', 'abc'], ['purchaseDate', '2099-01-01'], ['service', 'Pizza'], ['declaration', false], ['firstName', ''], ['reason', '']]) {
   r = await call({ ...good, [k]: v }, { ip: 'v-' + k });
   assert.equal(r.status, 422, k); assert.ok(r.body.fields[k], k);
 }
 assert.equal(sent.length, 0);
-console.log('✓ invalid email, order number, future date, unknown service, missing declaration and name are rejected');
+console.log('✓ invalid email, order number, future date, unknown service, missing declaration, name and reason are rejected');
 
 r = await call({ ...good, website: 'spam' }, { ip: 'bot' });
 assert.equal(r.status, 200); assert.equal(sent.length, 0);

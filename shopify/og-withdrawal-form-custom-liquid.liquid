@@ -170,7 +170,7 @@ h1{margin:0;font-weight:700;font-size:26px;line-height:1.15;letter-spacing:-.5px
               <option>Other</option>
             </select>
             <span class="err">Select the service or product.</span></div>
-          <div class="f full" data-k="reason"><label for="reason">Reason for withdrawal <i>(optional)</i></label><textarea id="reason" name="reason" placeholder="You don&rsquo;t have to give a reason. If you do, it helps us improve."></textarea></div>
+          <div class="f full" data-k="reason"><label for="reason">Reason for withdrawal <span class="req">*</span></label><textarea id="reason" name="reason" placeholder="Please tell us why you are withdrawing from your contract."></textarea><span class="err">Please tell us the reason for your withdrawal (at least a few words).</span></div>
         </div>
       </div>
 
@@ -234,6 +234,7 @@ h1{margin:0;font-weight:700;font-size:26px;line-height:1.15;letter-spacing:-.5px
     orderNumber:()=>/\d/.test($('orderNumber').value),
     purchaseDate:()=>!!$('purchaseDate').value && new Date($('purchaseDate').value)<=new Date(),
     service:()=>!!$('service').value,
+    reason:()=>$('reason').value.trim().length>=5,
     declaration:()=>$('declaration').checked
   };
   const box=k=>f.querySelector('[data-k="'+k+'"]');
