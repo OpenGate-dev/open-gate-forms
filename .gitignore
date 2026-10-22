@@ -1,0 +1,5 @@
+node_modules/
+.vercel/
+.env*
+test/last-email.html
+test/store-page.html

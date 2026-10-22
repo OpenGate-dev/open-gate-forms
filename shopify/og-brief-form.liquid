@@ -1,0 +1,415 @@
+{% comment %}
+  Open Gate — Project brief form (pre-checkout).
+  Add this section to the page/template where clients fill in their brief.
+  The form runs inside a Shadow DOM, so the theme's CSS cannot break its design.
+{% endcomment %}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<og-brief-form
+  id="og-brief-{{ section.id }}"
+  data-endpoint="{{ section.settings.endpoint | escape }}"
+  data-checkout="{{ section.settings.checkout_url | default: '/checkout' | escape }}"
+  data-delay="{{ section.settings.redirect_seconds }}"
+  style="display:block">
+  <template>
+<style>
+/* Layout: one centered brief card on a dark stage, live progress rail on top, sections stacked */
+:host{display:block;
+  --bg:#050505; --card:#0b0b0b; --field:#131313; --line:#242424; --line-2:#333;
+  --fg:#f4f4f2; --muted:#a3a3a3; --dim:#6f6f6f;
+  --lime:#c5ff6e; --lime-ink:#0b1400; --lime-soft:#141f05; --lime-line:#3d5a12;
+  --err:#ff6b6b;
+  --f-display:'Archivo',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-body:'Archivo',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+.ogf{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding:40px 16px 56px;position:relative;overflow:hidden;border-radius:var(--ogf-radius,0)}
+.ogf *{box-sizing:border-box}
+.stage{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.stage::before{content:"";position:absolute;inset:-40%;background:
+  radial-gradient(closest-side,rgba(197,255,110,.10),transparent 70%) 50% 20%/60% 50% no-repeat;animation:drift 14s ease-in-out infinite alternate}
+.stage::after{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:48px 48px;opacity:.25;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 70%);mask-image:radial-gradient(ellipse at 50% 0%,#000 0%,transparent 70%)}
+@keyframes drift{to{transform:translate(6%,8%)}}
+.wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;display:grid;gap:18px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand .id{display:flex;align-items:center;gap:10px}
+.brand img{width:36px;height:auto;display:block}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:17px;letter-spacing:-.3px}
+.brand b span{color:var(--lime)}
+.brand small{display:block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--lime-line);background:var(--lime-soft);color:var(--lime);border-radius:6px;padding:6px 10px;font:700 10px/1 var(--f-mono);letter-spacing:1.5px}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--lime);animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(197,255,110,.6)}80%,100%{box-shadow:0 0 0 7px rgba(197,255,110,0)}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px 26px 24px;position:relative;overflow:hidden;
+  box-shadow:0 30px 80px -30px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.02) inset;animation:rise .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{transform:translateY(14px);opacity:.4}to{transform:none;opacity:1}}
+.card::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--lime),transparent);opacity:.6}
+
+.progress{display:grid;gap:8px;margin-bottom:22px}
+.progress .row{display:flex;justify-content:space-between;align-items:center;font:700 10px/1 var(--f-mono);letter-spacing:1.5px;color:var(--dim);text-transform:uppercase}
+.progress .row b{color:var(--lime);font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:99px;background:#1a1a1a;overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#8fd14f,var(--lime));box-shadow:0 0 14px rgba(197,255,110,.45);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+
+h1{font-family:var(--f-display);font-weight:800;font-size:28px;line-height:1.1;letter-spacing:-.8px;margin:0 0 8px;text-wrap:balance}
+h1 span{color:var(--lime)}
+.lead{color:var(--muted);margin:0 0 22px;max-width:46ch}
+h2{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:17px;letter-spacing:-.2px;margin:0}
+h2 .n{width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;font:700 11px/1 var(--f-mono);background:var(--lime-soft);border:1px solid var(--lime-line);color:var(--lime)}
+.section{display:grid;gap:14px}
+.section>*,.wrap>*,.card form>*{min-width:0}
+.opt .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.divider{height:1px;background:var(--line);margin:26px 0 22px}
+
+.field{position:relative}
+.field .box{position:relative;display:flex;align-items:center;background:var(--field);border:1px solid var(--line);border-radius:14px;transition:border-color .2s,box-shadow .2s,background .2s}
+.field .ico{flex:none;width:44px;display:grid;place-items:center;color:var(--dim);transition:color .2s}
+.field .ico svg{width:18px;height:18px}
+.field .box input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--fg);font:500 15px/1.2 var(--f-body);padding:24px 44px 9px 0}
+.field .box label{position:absolute;left:44px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14.5px;pointer-events:none;transition:all .18s ease}
+.field .box label em{color:var(--lime);font-style:normal}
+.field .box input:focus + label,.field .box input:not(:placeholder-shown) + label{top:15px;font-size:11px;color:var(--dim);letter-spacing:.3px}
+.field .ok{position:absolute;right:14px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:var(--lime);color:var(--lime-ink);display:grid;place-items:center;transform:scale(0);transition:transform .3s cubic-bezier(.2,.8,.2,1.4)}
+.field .ok svg{width:12px;height:12px}
+.field .box:focus-within{border-color:var(--lime-line);box-shadow:0 0 0 4px rgba(197,255,110,.08);background:#151515}
+.field .box:focus-within .ico{color:var(--lime)}
+.field.valid .ok{transform:scale(1)}
+.field.invalid .box{border-color:rgba(255,107,107,.6)}
+.help{font-size:12.5px;color:var(--dim);margin:7px 2px 0;line-height:1.45}
+.error{font-size:12.5px;color:var(--err);margin:6px 2px 0;display:none}
+.invalid .error{display:block}
+
+.styles-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:4px}
+.styles-head span{font-weight:600;font-size:14.5px}
+.styles-head span em{color:var(--lime);font-style:normal}
+.styles-head small{font:700 10px/1 var(--f-mono);letter-spacing:1.5px;color:var(--dim);text-transform:uppercase}
+.styles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt label{display:grid;gap:8px;cursor:pointer;background:var(--field);border:1px solid var(--line);border-radius:14px;padding:8px 8px 10px;transition:border-color .2s,transform .2s,background .2s}
+.opt label:hover{border-color:var(--line-2);transform:translateY(-2px)}
+.opt .pv{height:58px;border-radius:9px;position:relative;overflow:hidden;background:#0d0d0d}
+.opt .nm{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;justify-content:center}
+.opt .rd{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line-2);display:grid;place-items:center;flex:none;transition:border-color .2s}
+.opt .rd::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--lime);transform:scale(0);transition:transform .2s cubic-bezier(.2,.8,.2,1.4)}
+.opt input:checked + label{border-color:var(--lime);background:#10160a;box-shadow:0 0 0 3px rgba(197,255,110,.08)}
+.opt input:checked + label .rd{border-color:var(--lime)}
+.opt input:checked + label .rd::after{transform:scale(1)}
+.opt input:focus-visible + label{outline:2px solid var(--lime);outline-offset:2px}
+/* previews */
+.pv-smooth{background:linear-gradient(135deg,#1d1d22,#141418)!important}
+.pv-smooth i{position:absolute;border-radius:50%;filter:blur(8px)}
+.pv-smooth i:nth-child(1){width:44px;height:44px;left:-6px;top:-8px;background:#9aa7ff;opacity:.55;animation:float 5s ease-in-out infinite}
+.pv-smooth i:nth-child(2){width:40px;height:40px;right:-8px;bottom:-12px;background:#ffb4d8;opacity:.45;animation:float 6s ease-in-out infinite reverse}
+@keyframes float{50%{transform:translate(8px,6px)}}
+.pv-futur{background:#05070d!important}
+.pv-futur::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(80,200,255,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(80,200,255,.35) 1px,transparent 1px);background-size:10px 10px;transform:perspective(60px) rotateX(45deg) translateY(10px);transform-origin:50% 100%;animation:scroll 2.4s linear infinite}
+.pv-futur::after{content:"";position:absolute;left:0;right:0;top:40%;height:2px;background:#52d6ff;box-shadow:0 0 10px #52d6ff;opacity:.9}
+@keyframes scroll{to{background-position:0 10px}}
+.pv-dark{background:#000!important}
+.pv-dark i{position:absolute;left:10px;right:10px;height:6px;border-radius:3px;background:#1f1f1f}
+.pv-dark i:nth-child(1){top:12px;width:50%;background:#2c2c2c}.pv-dark i:nth-child(2){top:26px}.pv-dark i:nth-child(3){top:38px;width:60%}
+.pv-dark b{position:absolute;right:10px;bottom:9px;width:18px;height:8px;border-radius:4px;background:#e9e9e9}
+.pv-modern{background:#f2f2ef!important}
+.pv-modern i{position:absolute;border-radius:3px}
+.pv-modern i:nth-child(1){left:8px;top:9px;width:34%;height:40px;background:#111}
+.pv-modern i:nth-child(2){right:8px;top:9px;width:42%;height:7px;background:#111}
+.pv-modern i:nth-child(3){right:8px;top:22px;width:30%;height:5px;background:#b5b5b0}
+.pv-modern i:nth-child(4){right:8px;bottom:9px;width:22%;height:9px;background:#ff5a1f;animation:blink 2.2s ease-in-out infinite}
+@keyframes blink{50%{opacity:.5}}
+.pv-ai{background:radial-gradient(circle at 50% 60%,#1a2a07,#070a03)!important;display:grid;place-items:center}
+.pv-ai span{font:800 18px/1 var(--f-display);background:linear-gradient(100deg,#c5ff6e,#f2ffdc,#c5ff6e);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 2.6s linear infinite}
+.pv-ai i{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--lime);box-shadow:0 0 6px var(--lime);animation:spark 2.4s ease-in-out infinite}
+.pv-ai i:nth-of-type(1){left:18%;top:28%}.pv-ai i:nth-of-type(2){right:20%;top:22%;animation-delay:.8s}.pv-ai i:nth-of-type(3){right:28%;bottom:18%;animation-delay:1.6s}
+@keyframes shine{to{background-position:-200% 0}}
+@keyframes spark{0%,100%{opacity:.2;transform:scale(.6)}50%{opacity:1;transform:scale(1.3)}}
+.ai-note{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--dim);margin-top:2px}
+.ai-note b{color:var(--lime);font-weight:700}
+
+.consent{display:flex;gap:12px;align-items:flex-start;background:var(--field);border:1px solid var(--line);border-radius:14px;padding:14px 14px;cursor:pointer;transition:border-color .2s,background .2s}
+.consent input{position:absolute;opacity:0;pointer-events:none}
+.consent .cb{flex:none;width:22px;height:22px;margin-top:1px;border-radius:6px;border:1.5px solid var(--line-2);display:grid;place-items:center;transition:all .2s;background:#0d0d0d}
+.consent .cb svg{width:13px;height:13px;stroke:var(--lime-ink);stroke-width:3;fill:none;stroke-dasharray:20;stroke-dashoffset:20;transition:stroke-dashoffset .3s .05s ease}
+.consent p{margin:0;font-size:13.5px;line-height:1.55;color:#e6e6e6}
+.consent a{color:var(--lime);text-underline-offset:3px}
+.consent em{color:var(--lime);font-style:normal}
+.consent:has(input:checked){border-color:var(--lime-line);background:#10160a}
+.consent:has(input:checked) .cb{background:var(--lime);border-color:var(--lime)}
+.consent:has(input:checked) .cb svg{stroke-dashoffset:0}
+.consent:has(input:focus-visible){outline:2px solid var(--lime);outline-offset:2px}
+.cwrap.invalid .consent{border-color:rgba(255,107,107,.6)}
+
+.submit{margin-top:20px;width:100%;border:0;cursor:pointer;border-radius:999px;padding:17px 22px;font:800 16px/1 var(--f-display);color:var(--lime-ink);letter-spacing:-.2px;
+  background:linear-gradient(110deg,var(--lime) 0%,var(--lime) 40%,#f1ffd9 50%,var(--lime) 60%,var(--lime) 100%);background-size:200% 100%;animation:btn 3.2s ease-in-out 1s infinite;
+  display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .15s,box-shadow .2s}
+.submit:hover{transform:translateY(-1px);box-shadow:0 10px 30px -8px rgba(197,255,110,.55)}
+.submit:active{transform:translateY(1px)}
+.submit:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.submit .arr{transition:transform .2s}.submit:hover .arr{transform:translateX(4px)}
+.submit.loading{pointer-events:none;animation:none;background:#9ccc55}
+.submit .spin{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(11,20,0,.25);border-top-color:var(--lime-ink);animation:sp .7s linear infinite;display:none}
+.submit.loading .spin{display:block}.submit.loading .arr{display:none}
+@keyframes btn{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes sp{to{transform:rotate(360deg)}}
+.skip{display:flex;gap:12px;align-items:flex-start;margin-top:14px;padding:14px;border:1px dashed var(--line-2);border-radius:14px;background:rgba(255,255,255,.015)}
+.skip .sk-ico{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#161616;border:1px solid var(--line);color:var(--muted)}
+.skip .sk-ico svg{width:18px;height:18px}
+.skip div{display:grid;gap:3px;min-width:0}
+.skip b{font-size:14px;font-weight:700}
+.skip span{font-size:13px;line-height:1.5;color:var(--muted)}
+.skip a{margin-top:4px;font-size:13.5px;font-weight:700;color:var(--lime);text-decoration:none;justify-self:start}
+.skip a:hover{text-decoration:underline;text-underline-offset:3px}
+.skip a:focus-visible{outline:2px solid var(--lime);outline-offset:2px;border-radius:4px}
+.trust{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin-top:16px}
+.trust span{display:inline-flex;align-items:center;gap:6px;font:500 12px/1.2 var(--f-body);color:var(--dim)}
+.trust svg{width:14px;height:14px;color:var(--lime)}
+
+.done{display:none;text-align:center;padding:18px 4px 6px}
+.done .tick{width:76px;height:76px;margin:0 auto 18px;border-radius:50%;background:var(--lime-soft);border:1px solid var(--lime-line);display:grid;place-items:center;animation:pop .5s cubic-bezier(.2,.8,.2,1.4) both;box-shadow:0 0 0 0 rgba(197,255,110,.5);animation:pop .5s cubic-bezier(.2,.8,.2,1.4) both,ring 1.8s ease-out .5s infinite}
+.done .tick svg{width:34px;height:34px;stroke:var(--lime);stroke-width:3;fill:none;stroke-dasharray:40;stroke-dashoffset:40;animation:draw .5s .35s ease forwards}
+.done h1{font-size:26px}
+.done .sum{display:grid;gap:0;text-align:left;border:1px solid var(--line);border-radius:14px;margin:20px 0 0;overflow:hidden}
+.done .sum div{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:14px}
+.done .sum div:last-child{border-bottom:0}
+.done .sum dt{font:700 10px/1.6 var(--f-mono);letter-spacing:1.5px;color:var(--dim);text-transform:uppercase}
+.done .sum dd{margin:0;font-weight:700;text-align:right;min-width:0;overflow-wrap:anywhere}
+.done .again{margin-top:16px;background:none;border:0;color:var(--muted);font:500 13px var(--f-body);text-decoration:underline;cursor:pointer}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(197,255,110,.45)}80%,100%{box-shadow:0 0 0 14px rgba(197,255,110,0)}}
+.card.is-done form{display:none}.card.is-done .done{display:block}
+.foot{text-align:center;font-size:12px;color:var(--dim)}
+.foot b{color:var(--muted);font-weight:600}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+
+
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:rgba(0,0,0,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s}
+.modal.open{opacity:1;pointer-events:auto}
+.modal .sheet{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:30px 24px 22px;text-align:center;transform:translateY(16px) scale(.97);transition:transform .45s cubic-bezier(.2,.8,.2,1);position:relative;overflow:hidden}
+.modal.open .sheet{transform:none}
+.modal .sheet::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--lime),transparent)}
+.modal .tick{width:72px;height:72px;margin:0 auto 16px;border-radius:50%;background:var(--lime-soft);border:1px solid var(--lime-line);display:grid;place-items:center}
+.modal.open .tick{animation:pop .5s cubic-bezier(.2,.8,.2,1.4) both,ring 1.8s ease-out .5s infinite}
+.modal .tick svg{width:32px;height:32px;stroke:var(--lime);stroke-width:3;fill:none;stroke-dasharray:40;stroke-dashoffset:40}
+.modal.open .tick svg{animation:draw .5s .35s ease forwards}
+.modal h3{font-family:var(--f-display);font-weight:800;font-size:24px;letter-spacing:-.6px;margin:0 0 8px;text-wrap:balance}
+.modal h3 span{color:var(--lime)}
+.modal p{color:var(--muted);margin:0 auto;max-width:34ch}
+.modal .go{margin-top:20px;display:grid;gap:10px}
+.modal .meter{height:4px;border-radius:99px;background:#1a1a1a;overflow:hidden}
+.modal .meter i{display:block;height:100%;width:0;background:var(--lime);box-shadow:0 0 10px rgba(197,255,110,.5)}
+.modal.open .meter i{animation:fill var(--wait,3s) linear forwards}
+@keyframes fill{to{width:100%}}
+.modal .meta{font:700 10px/1 var(--f-mono);letter-spacing:1.5px;color:var(--dim);text-transform:uppercase}
+.modal a.now{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:15px 18px;background:var(--lime);color:var(--lime-ink);font:800 15px/1 var(--f-display);text-decoration:none}
+.modal a.now:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.modal .pnote{font-size:12px;color:var(--dim);margin-top:4px}
+
+@media (max-width:520px){
+  .card{padding:22px 16px 20px;border-radius:18px}
+  h1{font-size:24px}
+  .styles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .opt:nth-child(4),.opt:nth-child(5){grid-column:span 1}
+  .brand .pill{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+<div class="ogf">
+<div class="stage" aria-hidden="true"></div>
+<main class="wrap">
+  <header class="brand">
+    <div class="id"><img alt="Open Gate" src="https://cdn.shopify.com/s/files/1/0745/7144/8588/files/Official_Open_Gate_logo.png?v=1790442687"><div><b>Open Gate<span>.</span></b><small>Ecommerce Solutions</small></div></div>
+    <span class="pill"><i></i>PROJECT BRIEF</span>
+  </header>
+
+  <section class="card" id="card">
+    <form id="brief" novalidate>
+      <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+      <div class="progress" aria-live="polite">
+        <div class="row"><span>Your brief</span><b id="pct">0% complete</b></div>
+        <div class="bar"><i id="bar"></i></div>
+      </div>
+
+      <h1>Scope &amp; <span>Requirements</span></h1>
+      <p class="lead">Please provide the primary details and requirements for your upcoming project below.</p>
+
+      <div class="section">
+        <h2><span class="n">1</span>Your brand</h2>
+
+        <div class="field" data-k="name">
+          <div class="box">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span>
+            <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder=" " required>
+            <label for="fullName">Full Name <em>*</em></label>
+            <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span>
+          </div>
+          <p class="error">Please enter your full name.</p>
+        </div>
+
+        <div class="field" data-k="brand">
+          <div class="box">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l2-5h12l2 5"/><path d="M4 9h16v3a3 3 0 0 1-5.3 2 3 3 0 0 1-5.4 0A3 3 0 0 1 4 12z"/><path d="M6 15v5h12v-5"/></svg></span>
+            <input id="brandName" name="brandName" type="text" autocomplete="organization" placeholder=" " required>
+            <label for="brandName">Brand Name <em>*</em></label>
+            <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span>
+          </div>
+          <p class="help">This data is utilized to establish your brand&rsquo;s foundational store.</p>
+          <p class="error">Please enter your brand name.</p>
+        </div>
+
+        <div class="field" data-k="style" id="styleField">
+          <div class="styles-head"><span>Design style <em>*</em></span><small>Pick one</small></div>
+          <div class="styles" role="radiogroup" aria-label="Design style" style="margin-top:10px">
+            <div class="opt"><input type="radio" name="style" id="st-smooth" value="Smooth"><label for="st-smooth"><span class="pv pv-smooth"><i></i><i></i></span><span class="nm"><span class="rd"></span>Smooth</span></label></div>
+            <div class="opt"><input type="radio" name="style" id="st-futur" value="Futuristic"><label for="st-futur"><span class="pv pv-futur"></span><span class="nm"><span class="rd"></span>Futuristic</span></label></div>
+            <div class="opt"><input type="radio" name="style" id="st-dark" value="Dark"><label for="st-dark"><span class="pv pv-dark"><i></i><i></i><i></i><b></b></span><span class="nm"><span class="rd"></span>Dark</span></label></div>
+            <div class="opt"><input type="radio" name="style" id="st-modern" value="Modern"><label for="st-modern"><span class="pv pv-modern"><i></i><i></i><i></i><i></i></span><span class="nm"><span class="rd"></span>Modern</span></label></div>
+            <div class="opt"><input type="radio" name="style" id="st-ai" value="AI"><label for="st-ai"><span class="pv pv-ai"><span>AI</span><i></i><i></i><i></i></span><span class="nm"><span class="rd"></span>AI</span></label></div>
+          </div>
+          <p class="help">Please select your Store design style, by selecting <b style="color:var(--lime);font-weight:700">(AI)</b> we will match the style to your Niche.</p>
+          <p class="error">Please choose a design style.</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section">
+        <h2><span class="n">2</span>Account Credentials</h2>
+        <div class="field" data-k="email">
+          <div class="box">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/></svg></span>
+            <input id="email" name="email" type="email" autocomplete="email" inputmode="email" placeholder=" " required>
+            <label for="email">Email <em>*</em></label>
+            <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span>
+          </div>
+          <p class="help">Please establish your login details below to securely access to your brand portal after we finish the order.</p>
+          <p class="error">Please enter a valid email address, like name@example.com.</p>
+        </div>
+
+        <div class="cwrap" data-k="consent" id="consentWrap">
+          <label class="consent" for="consent">
+            <input type="checkbox" id="consent" name="consent" required>
+            <span class="cb"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span>
+            <p>I expressly consent to the immediate commencement of the service and acknowledge that I will lose my right of withdrawal once the service has been fully performed by Open-Gate. <a href="https://open-gate.us/policies/terms-of-service" target="_blank" rel="noopener">Terms &amp; EU compliance</a><em>*</em></p>
+          </label>
+          <p class="error">Please confirm to continue.</p>
+        </div>
+      </div>
+
+      <button class="submit" type="submit" id="submit"><span class="spin"></span><span id="btnTxt">Submit</span><span class="arr">&rarr;</span></button>
+      <div class="skip">
+        <span class="sk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4z"/><path d="M7 9v5c0 1.7 2.2 3 5 3s5-1.3 5-3V9"/></svg></span>
+        <div><b>Ordering a course?</b><span>You can skip this form. We only need these details for store and project orders, because courses are sent straight to you.</span><a id="skipLink" href="/checkout">Skip to checkout &rarr;</a></div>
+      </div>
+      <div class="trust">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Secure connection</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>EU-compliant terms</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Takes about a minute</span>
+      </div>
+    </form>
+
+  </section>
+
+  </main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" aria-hidden="true">
+  <div class="sheet">
+    <div class="tick"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
+    <h3 id="mTitle">Thank you, <span id="mName">there</span>!</h3>
+    <p id="mText">{{ section.settings.thanks_text }}</p>
+    <div class="go">
+      <div class="meter"><i></i></div>
+      <span class="meta" id="mMeta">Taking you to checkout&hellip;</span>
+      
+    </div>
+  </div>
+</div>
+
+</div>
+  </template>
+</og-brief-form>
+<script>
+(function(){
+  const host=document.currentScript.previousElementSibling; if(!host||host.dataset.ready) return; host.dataset.ready='1';
+  const tpl=host.querySelector('template'); const root=host.attachShadow({mode:'open'}); root.appendChild(tpl.content.cloneNode(true));
+  const f=root.getElementById('brief'), $=id=>root.getElementById(id);
+  const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const checks={
+    name:()=>$('fullName').value.trim().length>=2,
+    brand:()=>$('brandName').value.trim().length>=1,
+    style:()=>!!f.querySelector('input[name=style]:checked'),
+    email:()=>emailRe.test($('email').value.trim()),
+    consent:()=>$('consent').checked
+  };
+  const wrap=k=>f.querySelector('[data-k="'+k+'"]');
+  const touched={};
+  function refresh(){
+    let n=0;
+    for(const k in checks){const ok=checks[k]();if(ok)n++;const w=wrap(k);
+      if(k!=='style'&&k!=='consent') w.classList.toggle('valid',ok);
+      if(touched[k]) w.classList.toggle('invalid',!ok);}
+    const p=Math.round(n/5*100); $('bar').style.width=p+'%'; $('pct').textContent=p+'% complete';
+  }
+  [['fullName','name'],['brandName','brand'],['email','email']].forEach(([id,k])=>{
+    $(id).addEventListener('input',()=>{ if(touched[k]) refresh(); else refresh(); });
+    $(id).addEventListener('blur',()=>{ if($(id).value.trim()) touched[k]=true; refresh(); });
+  });
+  f.querySelectorAll('input[name=style]').forEach(r=>r.addEventListener('change',()=>{touched.style=true;refresh();}));
+  $('consent').addEventListener('change',()=>{touched.consent=true;refresh();});
+  f.addEventListener('submit',e=>{
+    e.preventDefault();
+    for(const k in checks) touched[k]=true; refresh();
+    const bad=Object.keys(checks).find(k=>!checks[k]());
+    if(bad){const w=wrap(bad);w.classList.remove('shake');void w.offsetWidth;w.classList.add('shake');
+      const inp=w.querySelector('input');w.scrollIntoView({behavior:'smooth',block:'center'});if(inp)setTimeout(()=>inp.focus({preventScroll:true}),300);return;}
+    const b=$('submit'); b.classList.add('loading'); $('btnTxt').textContent='Sending your information';
+    const data={fullName:$('fullName').value.trim(),brandName:$('brandName').value.trim(),designStyle:f.querySelector('input[name=style]:checked').value,email:$('email').value.trim(),consent:true,submittedAt:new Date().toISOString(),website:$('website').value,startedAt,page:location.href};
+    sendBrief(data).finally(()=>{
+      b.classList.remove('loading'); $('btnTxt').textContent='Submit';
+      openModal(data);
+    });
+  });
+
+  /* ---- settings: filled in when the backend is live ---- */
+  const CONFIG={ endpoint:host.dataset.endpoint||null, checkoutUrl:host.dataset.checkout||'/checkout', redirectDelay:(Number(host.dataset.delay)||3)*1000 };
+  const onStore=true;
+  const startedAt=Date.now();
+
+  async function sendBrief(data){
+    const jobs=[];
+    if(CONFIG.endpoint) jobs.push((async()=>{
+      try{ const c=await fetch('/cart.js').then(r=>r.json()); data.cart=(c.items||[]).map(i=>({title:i.product_title,variant:i.variant_title||'',qty:i.quantity})); }catch(e){}
+      const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),8000);
+      try{ await fetch(CONFIG.endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),signal:ctl.signal}); }catch(e){} finally{ clearTimeout(t); }
+    })());
+    if(onStore) jobs.push(fetch('/cart/update.js',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({attributes:{'Full name':data.fullName,'Brand name':data.brandName,'Design style':data.designStyle,'Portal email':data.email,'Withdrawal consent':'Yes, '+data.submittedAt}})}).catch(()=>{}));
+    await Promise.all(jobs);
+  }
+  $('skipLink').href=CONFIG.checkoutUrl;
+  function openModal(data){
+    const m=$('modal'); $('mName').textContent=data.fullName.split(/\s+/)[0];
+    m.style.setProperty('--wait',CONFIG.redirectDelay+'ms');
+    m.classList.add('open'); m.setAttribute('aria-hidden','false'); 
+    if(onStore){ setTimeout(()=>{ location.href=CONFIG.checkoutUrl; },CONFIG.redirectDelay); }
+  }
+  refresh();
+})();
+</script>
+
+{% schema %}
+{
+  "name": "OG Project brief form",
+  "tag": "section",
+  "class": "og-brief-section",
+  "settings": [
+    { "type": "text", "id": "endpoint", "label": "Backend URL", "info": "Your Vercel address + /api/brief, e.g. https://open-gate-forms.vercel.app/api/brief", "default": "" },
+    { "type": "text", "id": "checkout_url", "label": "Checkout link", "default": "/checkout" },
+    { "type": "range", "id": "redirect_seconds", "label": "Seconds before going to checkout", "min": 2, "max": 8, "step": 1, "default": 3 },
+    { "type": "textarea", "id": "thanks_text", "label": "Thank-you message", "default": "We\u2019ve received your information. Next, complete your checkout and our team will get started on your store." }
+  ],
+  "presets": [ { "name": "OG Project brief form" } ]
+}
+{% endschema %}

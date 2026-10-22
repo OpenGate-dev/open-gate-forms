@@ -1,0 +1,11 @@
+{
+  "name": "open-gate-forms",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend for Open Gate store forms (project brief, withdrawal request).",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node test/brief.test.js"
+  }
+}
