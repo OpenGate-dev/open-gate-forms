@@ -6,6 +6,6 @@
   "description": "Backend for Open Gate store forms (project brief, withdrawal request).",
   "engines": { "node": ">=18" },
   "scripts": {
-    "test": "node test/brief.test.js"
+    "test": "node test/brief.test.js && node test/withdrawal.test.js"
   }
 }

@@ -1,0 +1,276 @@
+{% comment %}
+  Open Gate — Right of Withdrawal form. Custom Liquid version: paste into a "Custom Liquid" section.
+{% endcomment %}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<og-withdrawal-form id="og-wd-main" data-endpoint="https://open-gate-forms.vercel.app/api/withdrawal" style="display:block">
+  <template>
+<style>
+/* Layout: a formal notice document. Header band, numbered parts separated by hairlines, a summary of terms, then a declaration and submit. */
+:host{display:block;
+  --bg:#0a0a0a; --paper:#101010; --field:#161616; --line:#262626; --line-2:#3a3a3a;
+  --fg:#ececea; --muted:#9a9a98; --dim:#6a6a68; --ink:#0a0a0a; --white:#f5f5f3;
+  --err:#e5484d; --red:#ff5c5c; --red-bg:#1f0c0c; --red-line:#5a2020; --amber:#ffb020; --amber-bg:#1f1806; --amber-line:#5a4210; --info-bg:#141414;
+  --f-body:'Archivo',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+.ogw{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;padding:40px 16px 56px}
+.ogw *{box-sizing:border-box}
+.wrap{max-width:600px;margin:0 auto;display:grid;gap:16px}
+.wrap>*{min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.top .id{display:flex;align-items:center;gap:10px}
+.top img{width:30px;height:auto;display:block}
+.top b{font-weight:700;font-size:16px;letter-spacing:-.2px}
+.top small{font:500 10px/1 var(--f-mono);letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+
+.doc{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.head{padding:26px 26px 22px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.kicker{font:700 10.5px/1 var(--f-mono);letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+h1{margin:0;font-weight:700;font-size:26px;line-height:1.15;letter-spacing:-.5px;text-wrap:balance}
+.head p{margin:0;color:var(--muted);max-width:52ch}
+.ref{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px;font:500 11px/1.4 var(--f-mono);color:var(--dim)}
+.ref span b{color:var(--muted);font-weight:700}
+
+.part{padding:22px 26px;border-bottom:1px solid var(--line);display:grid;gap:14px}
+.part>*{min-width:0}
+.ph{display:flex;align-items:baseline;gap:12px}
+.ph .no{font:700 11px/1 var(--f-mono);color:var(--dim);letter-spacing:1px}
+.ph h2{margin:0;font-weight:600;font-size:16px;letter-spacing:-.1px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid>*{min-width:0}
+.full{grid-column:1/-1}
+
+.f{display:grid;gap:6px}
+.f label{font-size:13px;font-weight:600;color:var(--fg)}
+.f label i{font-style:normal;color:var(--muted);font-weight:400}
+.f label .req{color:var(--muted)}
+.f input,.f select,.f textarea{width:100%;background:var(--field);border:1px solid var(--line);border-radius:6px;color:var(--fg);font:500 15px/1.3 var(--f-body);padding:12px 12px;outline:0;transition:border-color .15s,box-shadow .15s}
+.f textarea{min-height:84px;resize:vertical;line-height:1.5}
+.f select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+.f input::placeholder,.f textarea::placeholder{color:var(--dim)}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--line-2);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+.f input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.7)}
+.f .hint{font-size:12px;color:var(--dim)}
+.f .err{font-size:12px;color:var(--err);display:none}
+.f.bad input,.f.bad select,.f.bad textarea{border-color:var(--err)}
+.f.bad .err{display:block}
+
+.terms{display:grid;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.terms div{display:grid;grid-template-columns:120px 1fr;gap:14px;padding:13px 14px;border-bottom:1px solid var(--line);font-size:13.5px}
+.notes{display:grid;gap:8px}
+.note{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;padding:13px 14px;border:1px solid var(--line);border-left-width:3px;border-radius:8px;background:var(--info-bg)}
+.note .tag{display:inline-flex;align-items:center;gap:6px;font:700 9.5px/1 var(--f-mono);letter-spacing:1.3px;padding:5px 7px;border-radius:4px;white-space:nowrap;margin-top:1px}
+.note .tag i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.note b{display:block;font-size:13.5px;font-weight:700;margin-bottom:2px}
+.note p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.5}
+.note.red{border-color:var(--red-line);border-left-color:var(--red);background:var(--red-bg)}
+.note.red .tag{color:var(--red);background:rgba(255,92,92,.12);border:1px solid var(--red-line)}
+.note.amber{border-color:var(--amber-line);border-left-color:var(--amber);background:var(--amber-bg)}
+.note.amber .tag{color:var(--amber);background:rgba(255,176,32,.12);border:1px solid var(--amber-line)}
+.note.info{border-left-color:var(--line-2)}
+.note.info .tag{color:var(--muted);background:#1c1c1c;border:1px solid var(--line-2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font:500 11px/1 var(--f-mono);color:var(--dim)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:8px;height:8px;border-radius:2px}
+.terms div:last-child{border-bottom:0}
+.terms dt{font:700 10px/1.7 var(--f-mono);letter-spacing:1.3px;color:var(--dim);text-transform:uppercase}
+.terms dd{margin:0;color:var(--fg)}
+
+.decl{display:flex;gap:12px;align-items:flex-start;cursor:pointer;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--field)}
+.decl input{position:absolute;opacity:0;pointer-events:none}
+.decl .cb{flex:none;width:20px;height:20px;margin-top:2px;border-radius:4px;border:1.5px solid var(--line-2);display:grid;place-items:center;transition:background .15s,border-color .15s}
+.decl .cb svg{width:12px;height:12px;stroke:var(--ink);stroke-width:3.2;fill:none;opacity:0}
+.decl p{margin:0;font-size:13.5px;line-height:1.55}
+.decl:has(input:checked) .cb{background:var(--white);border-color:var(--white)}
+.decl:has(input:checked) .cb svg{opacity:1}
+.decl:has(input:focus-visible){outline:2px solid var(--white);outline-offset:2px}
+.dwrap.bad .decl{border-color:var(--err)}
+.dwrap .err{font-size:12px;color:var(--err);display:none;margin-top:6px}
+.dwrap.bad .err{display:block}
+
+.actions{padding:22px 26px 24px;display:grid;gap:12px}
+.submit{width:100%;border:0;border-radius:6px;padding:16px 18px;background:var(--white);color:var(--ink);font:700 15px/1 var(--f-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .15s}
+.submit:hover{background:#ffffff}
+.submit:focus-visible{outline:2px solid var(--white);outline-offset:3px}
+.submit .spin{width:15px;height:15px;border-radius:50%;border:2px solid rgba(0,0,0,.2);border-top-color:var(--ink);display:none;animation:sp .7s linear infinite}
+.submit.loading{pointer-events:none;background:#cfcfcd}.submit.loading .spin{display:block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.legal{font-size:12px;color:var(--dim);line-height:1.5;margin:0}
+.legal a{color:var(--muted)}
+
+.done{display:none;padding:30px 26px 28px;gap:16px}
+.doc.is-done form{display:none}.doc.is-done .done{display:grid}
+.done .stamp{justify-self:start;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);border-radius:4px;padding:7px 10px;font:700 10.5px/1 var(--f-mono);letter-spacing:1.5px;color:var(--fg)}
+.done .stamp i{width:7px;height:7px;border-radius:50%;background:var(--white)}
+.done h2{margin:0;font-weight:700;font-size:24px;letter-spacing:-.4px}
+.done p{margin:0;color:var(--muted);max-width:52ch}
+.done .terms{margin-top:4px}
+.done .terms dd{font-weight:600;overflow-wrap:anywhere}
+.foot{text-align:center;font-size:12px;color:var(--dim)}
+.foot b{color:var(--muted);font-weight:600}
+
+@media (max-width:540px){
+  .head,.part,.actions,.done{padding-left:16px;padding-right:16px}
+  .grid{grid-template-columns:1fr}
+  .terms div{grid-template-columns:1fr;gap:3px}
+  .note{grid-template-columns:1fr;gap:8px}
+  .note .tag{justify-self:start}
+  h1{font-size:23px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.formerr{display:none;font-size:13px;color:var(--err);border:1px solid rgba(229,72,77,.4);background:rgba(229,72,77,.08);border-radius:6px;padding:10px 12px}
+.formerr.show{display:block}
+</style>
+<div class="ogw">
+<main class="wrap">
+  <header class="top">
+    <div class="id"><img alt="Open Gate" src="https://cdn.shopify.com/s/files/1/0745/7144/8588/files/Official_Open_Gate_logo.png?v=1790442687"><b>Open Gate</b></div>
+    <small>Withdrawal notice</small>
+  </header>
+
+  <section class="doc" id="doc">
+    <form id="wd" novalidate>
+      <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+
+      <div class="head">
+        <span class="kicker">Right of Withdrawal</span>
+        <h1>Notice of withdrawal from contract</h1>
+        <p>Use this form to withdraw from your contract with Open Gate. Fill in the details of your order below. All fields marked with an asterisk are required.</p>
+        <div class="ref"><span><b>Legal basis</b> EU Directive 2011/83/EU</span><span><b>Response</b> within 14 days</span></div>
+      </div>
+
+      <div class="part">
+        <div class="ph"><span class="no">01</span><h2>Your details</h2></div>
+        <div class="grid">
+          <div class="f" data-k="firstName"><label for="firstName">First name <span class="req">*</span></label><input id="firstName" name="firstName" autocomplete="given-name"><span class="err">Enter your first name.</span></div>
+          <div class="f" data-k="lastName"><label for="lastName">Last name <span class="req">*</span></label><input id="lastName" name="lastName" autocomplete="family-name"><span class="err">Enter your last name.</span></div>
+          <div class="f full" data-k="email"><label for="email">Email address <span class="req">*</span></label><input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="The email you used for your order"><span class="err">Enter a valid email address, like name@example.com.</span></div>
+          <div class="f full" data-k="address"><label for="address">Address <i>(optional)</i></label><input id="address" name="address" autocomplete="street-address" placeholder="Street, city, postal code, country"></div>
+        </div>
+      </div>
+
+      <div class="part">
+        <div class="ph"><span class="no">02</span><h2>Order details</h2></div>
+        <div class="grid">
+          <div class="f" data-k="orderNumber"><label for="orderNumber">Order number <span class="req">*</span></label><input id="orderNumber" name="orderNumber" placeholder="#1234" autocomplete="off"><span class="hint">Shown in your order confirmation email.</span><span class="err">Enter your order number.</span></div>
+          <div class="f" data-k="purchaseDate"><label for="purchaseDate">Date of purchase <span class="req">*</span></label><input id="purchaseDate" name="purchaseDate" type="date"><span class="err">Enter the date of your order.</span></div>
+          <div class="f full" data-k="service"><label for="service">Service or product <span class="req">*</span></label>
+            <select id="service" name="service">
+              <option value="">Select what you ordered</option>
+              <option>Store build</option>
+              <option>App Builder</option>
+              <option>AI Business Model</option>
+              <option>Cash Flow with Affiliate</option>
+              <option>YouTube Automation</option>
+              <option>Trading Course A-Z</option>
+              <option>SEO Optimization</option>
+              <option>Marketing Strategy</option>
+              <option>Other</option>
+            </select>
+            <span class="err">Select the service or product.</span></div>
+          <div class="f full" data-k="reason"><label for="reason">Reason for withdrawal <i>(optional)</i></label><textarea id="reason" name="reason" placeholder="You don&rsquo;t have to give a reason. If you do, it helps us improve."></textarea></div>
+        </div>
+      </div>
+
+      <div class="part">
+        <div class="ph"><span class="no">03</span><h2>Important information</h2></div>
+        <div class="notes">
+          <div class="note red"><span class="tag"><i></i>IMPORTANT</span><div><b>Completed work is charged</b><p>A pro-rata charge applies for any work already completed at the time of your request.</p></div></div>
+          <div class="note amber"><span class="tag"><i></i>TIMELINE</span><div><b>Response within 14 days</b><p>We will contact you within 14 days with the outcome and any applicable refund calculation.</p></div></div>
+          <div class="note info"><span class="tag"><i></i>INFO</span><div><b>How refunds are paid</b><p>Any refund is made using the same payment method you used for the original order.</p></div></div>
+        </div>
+        <div class="legend"><span><i style="background:var(--red)"></i>May affect your refund</span><span><i style="background:var(--amber)"></i>Timing</span><span><i style="background:var(--line-2)"></i>General information</span></div>
+        <div class="dwrap" data-k="declaration">
+          <label class="decl" for="declaration">
+            <input type="checkbox" id="declaration" name="declaration">
+            <span class="cb"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span>
+            <p>I hereby give notice that I withdraw from my contract for the provision of the service stated above, and I have read the information about completed work and processing. <span style="color:var(--muted)">*</span></p>
+          </label>
+          <p class="err">Please confirm the declaration to submit your notice.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <p class="formerr" id="formErr" role="alert"></p>
+        <button type="submit" class="submit" id="submit"><span class="spin"></span><span id="btnTxt">Submit withdrawal notice</span></button>
+        <p class="legal">After you submit, you&rsquo;ll receive a confirmation by email with your reference number. Questions? Contact info@open-gate.us. Read our <a href="https://open-gate.us/policies/refund-policy" target="_blank" rel="noopener">refund policy</a> and <a href="https://open-gate.us/policies/terms-of-service" target="_blank" rel="noopener">terms</a>.</p>
+      </div>
+    </form>
+
+    <div class="done" id="done" aria-live="polite">
+      <span class="stamp"><i></i>NOTICE RECEIVED</span>
+      <h2>Your withdrawal notice has been submitted.</h2>
+      <p id="dMsg">We&rsquo;ve sent a confirmation to <b id="dEmail" style="color:var(--fg)"></b>. Keep your reference number for any questions about this request.</p>
+      <dl class="terms">
+        <div><dt>Reference</dt><dd id="dRef"></dd></div>
+        <div><dt>Name</dt><dd id="dName"></dd></div>
+        <div><dt>Order number</dt><dd id="dOrder"></dd></div>
+        <div><dt>Date of purchase</dt><dd id="dDate"></dd></div>
+        <div><dt>Service</dt><dd id="dService"></dd></div>
+        <div><dt>Submitted</dt><dd id="dWhen"></dd></div>
+      </dl>
+      <p style="font-size:13px">We will contact you within 14 days with the outcome and any applicable refund calculation.</p>
+    </div>
+  </section>
+
+</main>
+
+</div>
+  </template>
+</og-withdrawal-form>
+<script>
+(function(){
+  const host=document.currentScript.previousElementSibling; if(!host||host.dataset.ready) return; host.dataset.ready='1';
+  const root=host.attachShadow({mode:'open'}); root.appendChild(host.querySelector('template').content.cloneNode(true));
+  const endpoint=host.dataset.endpoint||''; const startedAt=Date.now();
+  const f=root.getElementById('wd'), $=id=>root.getElementById(id);
+  const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const checks={
+    firstName:()=>$('firstName').value.trim().length>=1,
+    lastName:()=>$('lastName').value.trim().length>=1,
+    email:()=>emailRe.test($('email').value.trim()),
+    orderNumber:()=>/\d/.test($('orderNumber').value),
+    purchaseDate:()=>!!$('purchaseDate').value && new Date($('purchaseDate').value)<=new Date(),
+    service:()=>!!$('service').value,
+    declaration:()=>$('declaration').checked
+  };
+  const box=k=>f.querySelector('[data-k="'+k+'"]');
+  const seen={};
+  function mark(k){ if(seen[k]) box(k).classList.toggle('bad',!checks[k]()); }
+  Object.keys(checks).forEach(k=>{const el=$(k); const ev=(el.type==='checkbox'||el.tagName==='SELECT'||el.type==='date')?'change':'input';
+    el.addEventListener(ev,()=>mark(k)); el.addEventListener('blur',()=>{seen[k]=true;mark(k);});});
+  $('purchaseDate').max=new Date().toISOString().slice(0,10);
+  f.addEventListener('submit',e=>{
+    e.preventDefault();
+    Object.keys(checks).forEach(k=>{seen[k]=true;mark(k);});
+    const bad=Object.keys(checks).find(k=>!checks[k]());
+    if(bad){ $(bad).focus(); box(bad).scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    const b=$('submit'); b.classList.add('loading'); $('btnTxt').textContent='Submitting notice'; $('formErr').classList.remove('show');
+    const data={firstName:$('firstName').value.trim(),lastName:$('lastName').value.trim(),email:$('email').value.trim(),address:$('address').value.trim(),
+      orderNumber:$('orderNumber').value.trim(),purchaseDate:$('purchaseDate').value,service:$('service').value,reason:$('reason').value.trim(),
+      declaration:true,website:$('website').value,startedAt,page:location.href};
+    const fail=(msg)=>{ b.classList.remove('loading'); $('btnTxt').textContent='Submit withdrawal notice'; $('formErr').textContent=msg; $('formErr').classList.add('show'); };
+    if(!endpoint){ fail('The form is not connected yet. Please email your request to info@open-gate.us.'); return; }
+    const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),12000);
+    fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),signal:ctl.signal})
+      .then(r=>r.json().then(j=>({status:r.status,j})))
+      .then(({status,j})=>{
+        clearTimeout(tm);
+        if(status===422&&j.fields){ Object.keys(j.fields).forEach(k=>{ if(box(k)){seen[k]=true;box(k).classList.add('bad');} }); fail('Please check the highlighted fields.'); return; }
+        if(status===429){ fail('Too many attempts. Please wait a few minutes and try again.'); return; }
+        if(!j.ok){ fail('We could not submit your notice. Please try again, or email info@open-gate.us.'); return; }
+        const d=new Date(data.purchaseDate+'T12:00:00');
+        $('dRef').textContent=j.ref; $('dName').textContent=data.firstName+' '+data.lastName;
+        $('dOrder').textContent=data.orderNumber; $('dDate').textContent=d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+        $('dService').textContent=data.service; $('dEmail').textContent=data.email;
+        if(j.clientEmailSent===false) $('dMsg').textContent='Your notice is recorded. We could not send the confirmation email, so please save this page or note your reference number.';
+        $('dWhen').textContent=new Date().toLocaleString('en-GB',{dateStyle:'long',timeStyle:'short'});
+        $('doc').classList.add('is-done'); b.classList.remove('loading'); $('btnTxt').textContent='Submit withdrawal notice';
+        $('doc').scrollIntoView({behavior:'smooth',block:'start'});
+      })
+      .catch(()=>{ clearTimeout(tm); fail('Connection problem. Please check your internet connection and try again.'); });
+  });
+})();
+</script>

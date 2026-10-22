@@ -3,10 +3,11 @@
 Backend for the Open Gate store forms, running on Vercel.
 
 - `POST /api/brief`: the pre-checkout project brief. It checks the answers, blocks spam and emails the team.
+- `POST /api/withdrawal`: Right of Withdrawal notice. The client gets a confirmation with a reference number (WD-XXXXXX), and the team gets the full details with a 14-day deadline.
 - `GET /api/health`: shows whether the backend is live and which notifications are set up.
-- `shopify/og-brief-form.liquid`: the form as a Shopify theme section.
+- `shopify/`: both forms as theme sections (`og-*-form.liquid`) and as Custom Liquid versions (`*-custom-liquid.liquid`).
 
-The withdrawal request form will be added later as a second route.
+**Client confirmations need the open-gate.us domain verified in Resend.** Without it, Resend only delivers to your own account address. If a client confirmation fails, the team email says so, and the client is told to save their reference number.
 
 ## How a submission flows
 

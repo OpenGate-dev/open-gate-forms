@@ -7,6 +7,7 @@ export default function handler(req, res) {
       ok: true,
       email: Boolean(process.env.RESEND_API_KEY),
       telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
+      sender: process.env.NOTIFY_FROM ? 'own domain' : 'resend test sender',
       notifyTo: (process.env.NOTIFY_TO || 'info@open-gate.us').split(',').length + ' recipient(s)',
     })
   );

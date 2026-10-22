@@ -3,3 +3,5 @@ node_modules/
 .env*
 test/last-email.html
 test/store-page.html
+test/last-withdrawal-*.html
+test/wd-page.html
